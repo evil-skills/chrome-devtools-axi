@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.28](https://github.com/kunchenguid/chrome-devtools-axi/compare/chrome-devtools-axi-v0.1.27...chrome-devtools-axi-v0.1.28) (2026-07-23)
+
+
+### Bug Fixes
+
+* execute every PR body compliance event ([#89](https://github.com/kunchenguid/chrome-devtools-axi/issues/89)) ([3a1aa04](https://github.com/kunchenguid/chrome-devtools-axi/commit/3a1aa04be8eaa7006211f0ee6d3ff46bbe77d68e))
+
 ## [0.1.27](https://github.com/kunchenguid/chrome-devtools-axi/compare/chrome-devtools-axi-v0.1.26...chrome-devtools-axi-v0.1.27) (2026-07-22)
 
 
