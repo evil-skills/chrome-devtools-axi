@@ -1,0 +1,52 @@
+diff --git a/dist/hooks.d.ts b/dist/hooks.d.ts
+index 14bb5e040b37af112b3ed2aff83901c297adf0c7..5918dd55ff2088c1a277fbca88844dd870ffadd2 100644
+--- a/dist/hooks.d.ts
++++ b/dist/hooks.d.ts
+@@ -44,4 +44,5 @@ export declare function computeSessionStartHookUpdate(settings: HookSettings, sp
+ export declare function computeCodexConfigUpdate(content: string): [string, boolean];
+ export declare function resolvePortableHookCommand(execPath: string, binaryNames: string[], marker: string, context: PortableHookCommandContext): string;
+ export declare function shouldInstallHooksForNodeAxiExecPath(execPath: string, policy: NodeAxiExecPathPolicy): boolean;
++export declare function resolveClaudeSettingsJsonTargets(home: string): string[];
+ export declare function installSessionStartHooks(options?: InstallSessionStartHooksOptions): void;
+diff --git a/dist/hooks.js b/dist/hooks.js
+index 19a3ead82ab104d6b02151d6e78aca6ab8fb288a..737d95400d2b8afcebec35793d988e3fcbffcb5d 100644
+--- a/dist/hooks.js
++++ b/dist/hooks.js
+@@ -327,6 +327,28 @@ function buildInferredHookInstallPolicy(marker, options, inferred) {
+         distEntrypoints,
+     });
+ }
++/**
++ * Resolve the Claude Code `settings.json` paths this installer should write.
++ *
++ * Claude Code reads its config from `$CLAUDE_CONFIG_DIR` (default `~/.claude`).
++ * firstmate's glm crewmates launch the same Claude Code binary under a
++ * redirected config dir, exposed either as the standard `CLAUDE_CONFIG_DIR` or
++ * as firstmate's `FM_GLM_CLAUDE_CONFIG_DIR` (default `$HOME/.glm`). When a
++ * redirect is active we write BOTH the default and the redirected location so
++ * every Claude-compatible host the user may launch picks up the ambient hook;
++ * a mixed claude (`~/.claude`) + glm (`~/.glm`) fleet stays in sync. When no
++ * redirect is set, the result is the single default target and behavior is
++ * identical to before.
++ */
++export function resolveClaudeSettingsJsonTargets(home) {
++    const targets = [join(home, ".claude", "settings.json")];
++    const redirected = process.env.CLAUDE_CONFIG_DIR || process.env.FM_GLM_CLAUDE_CONFIG_DIR;
++    if (redirected) {
++        targets.push(join(redirected, "settings.json"));
++    }
++    // Dedupe in case the redirect resolves to the same path as the default.
++    return Array.from(new Set(targets));
++}
+ export function installSessionStartHooks(options = {}) {
+     const inferred = inferHookOptions(options.execPath ?? process.argv[1]);
+     const marker = options.marker ?? inferred?.marker;
+@@ -352,7 +374,7 @@ export function installSessionStartHooks(options = {}) {
+     const command = resolvePortableHookCommand(execPath, binaryNames, marker, buildDefaultPortableCommandContext());
+     const home = options.homeDir ?? homedir();
+     const jsonTargets = [
+-        join(home, ".claude", "settings.json"),
++        ...resolveClaudeSettingsJsonTargets(home),
+         join(home, ".codex", "hooks.json"),
+     ];
+     const codexConfigPath = join(home, ".codex", "config.toml");

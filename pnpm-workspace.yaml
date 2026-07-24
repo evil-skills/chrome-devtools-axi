@@ -10,3 +10,5 @@ onlyBuiltDependencies:
   - esbuild
 allowBuilds:
   esbuild: true
+patchedDependencies:
+  axi-sdk-js@0.1.8: patches/axi-sdk-js@0.1.8.patch
