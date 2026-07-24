@@ -45,12 +45,33 @@ export function shouldInstallHooksForExecPath(execPath: string): boolean {
 }
 
 /**
+ * Resolve the Claude Code config dirs whose `settings.json` should receive the
+ * hook. Claude Code reads from `$CLAUDE_CONFIG_DIR` (default `~/.claude`);
+ * firstmate's glm crewmates run the binary under a redirected dir, exposed as
+ * `CLAUDE_CONFIG_DIR` or `FM_GLM_CLAUDE_CONFIG_DIR` (default `~/.glm`). When a
+ * redirect is active we target BOTH the default and the redirected dir (deduped)
+ * so a mixed claude + glm fleet stays in sync. Mirrors quota-axi's resolution
+ * and the axi-sdk-js installer's behavior.
+ */
+export function resolveClaudeConfigDirs(home: string): string[] {
+  const dirs = [join(home, ".claude")];
+  const redirected =
+    process.env.CLAUDE_CONFIG_DIR || process.env.FM_GLM_CLAUDE_CONFIG_DIR;
+  if (redirected) {
+    dirs.push(redirected);
+  }
+  return Array.from(new Set(dirs));
+}
+
+/**
  * Returns hook installation targets for supported agents.
  */
 export function getHookTargets(): HookTarget[] {
   const home = homedir();
   return [
-    { path: join(home, ".claude", "settings.json") },
+    ...resolveClaudeConfigDirs(home).map((path) => ({
+      path: join(path, "settings.json"),
+    })),
     { path: join(home, ".codex", "hooks.json") },
     { path: join(home, ".codex", "config.toml") },
   ];

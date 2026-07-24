@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { installSessionStartHooks } = vi.hoisted(() => ({
   installSessionStartHooks: vi.fn(),
@@ -200,6 +200,30 @@ describe("shouldInstallHooksForExecPath", () => {
 });
 
 describe("getHookTargets", () => {
+  let originalClaudeConfigDir: string | undefined;
+  let originalFmGlmClaudeConfigDir: string | undefined;
+
+  beforeEach(() => {
+    originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
+    originalFmGlmClaudeConfigDir = process.env.FM_GLM_CLAUDE_CONFIG_DIR;
+    // Hermetic: this process may run under a redirected CLAUDE_CONFIG_DIR.
+    delete process.env.CLAUDE_CONFIG_DIR;
+    delete process.env.FM_GLM_CLAUDE_CONFIG_DIR;
+  });
+
+  afterEach(() => {
+    if (originalClaudeConfigDir === undefined) {
+      delete process.env.CLAUDE_CONFIG_DIR;
+    } else {
+      process.env.CLAUDE_CONFIG_DIR = originalClaudeConfigDir;
+    }
+    if (originalFmGlmClaudeConfigDir === undefined) {
+      delete process.env.FM_GLM_CLAUDE_CONFIG_DIR;
+    } else {
+      process.env.FM_GLM_CLAUDE_CONFIG_DIR = originalFmGlmClaudeConfigDir;
+    }
+  });
+
   it("returns Claude and both Codex targets", () => {
     const targets = getHookTargets();
     expect(targets.length).toBe(3);
@@ -227,6 +251,25 @@ describe("getHookTargets", () => {
       t.path.includes(".codex/config.toml"),
     );
     expect(codex!.path).toMatch(/config\.toml$/);
+  });
+
+  it("targets the CLAUDE_CONFIG_DIR redirect in addition to the default", () => {
+    process.env.CLAUDE_CONFIG_DIR = "/home/user/.glm";
+    const targets = getHookTargets();
+    expect(
+      targets.filter((t) => t.path.endsWith("settings.json")),
+    ).toHaveLength(2);
+    expect(
+      targets.some((t) => t.path === "/home/user/.glm/settings.json"),
+    ).toBe(true);
+  });
+
+  it("honors FM_GLM_CLAUDE_CONFIG_DIR as a fallback redirect", () => {
+    process.env.FM_GLM_CLAUDE_CONFIG_DIR = "/home/user/.glm";
+    const targets = getHookTargets();
+    expect(
+      targets.some((t) => t.path === "/home/user/.glm/settings.json"),
+    ).toBe(true);
   });
 });
 
